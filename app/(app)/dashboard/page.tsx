@@ -42,11 +42,33 @@ function formatHistoryDate(value: string | null): string {
   return Number.isNaN(date.getTime()) ? 'Unknown date' : date.toLocaleString();
 }
 
+const RELATIVE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['year', 365 * 24 * 3600],
+  ['month', 30 * 24 * 3600],
+  ['week', 7 * 24 * 3600],
+  ['day', 24 * 3600],
+  ['hour', 3600],
+  ['minute', 60],
+];
+
+function formatRelativeTime(value: string | null, now: number = Date.now()): string {
+  if (!value) return 'Unknown date';
+  const time = new Date(value).getTime();
+  if (Number.isNaN(time)) return 'Unknown date';
+  const seconds = Math.round((time - now) / 1000);
+  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+  for (const [unit, size] of RELATIVE_UNITS) {
+    if (Math.abs(seconds) >= size) return rtf.format(Math.trunc(seconds / size), unit);
+  }
+  return rtf.format(0, 'second');
+}
+
 export default function DashboardPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState(false);
   const [restoringIndex, setRestoringIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [savedProfile, setSavedProfile] = useState<UserProfile | null>(null);
@@ -112,11 +134,13 @@ export default function DashboardPage() {
   }, []);
 
   const fetchHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    setHistoryError(false);
     try {
       const data = (await apiGet('/api/session/history')) as { history?: HistoryItem[] };
       setHistory(data.history ?? []);
     } catch {
-      setHistory([]);
+      setHistoryError(true);
     } finally {
       setHistoryLoading(false);
     }
@@ -180,6 +204,7 @@ export default function DashboardPage() {
       fetchSeqRef.current += 1;
       savedProfileRef.current = null;
       setSavedProfile(null);
+      setHistory((prev) => prev.map((h) => (h.current ? { ...h, current: false } : h)));
       shouldFocusRefreshRef.current = true;
       setDeleting(false);
       setConfirmingDelete(false);
@@ -514,6 +539,13 @@ export default function DashboardPage() {
         <CardContent className="pt-0">
           {historyLoading ? (
             <p className="text-sm text-muted-foreground">Loading history...</p>
+          ) : historyError ? (
+            <div className="flex items-center justify-between gap-4" role="alert">
+              <p className="text-sm text-muted-foreground">Unable to load your history.</p>
+              <Button size="sm" variant="outline" onClick={fetchHistory}>
+                Retry
+              </Button>
+            </div>
           ) : history.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No past analyses yet. Your last 10 analyses will show up here.
@@ -524,7 +556,9 @@ export default function DashboardPage() {
                 <li key={item.index} className="flex items-center justify-between gap-4 py-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium flex items-center gap-2">
-                      {formatHistoryDate(item.createdAt)}
+                      <span title={formatHistoryDate(item.createdAt)}>
+                        {formatRelativeTime(item.createdAt)}
+                      </span>
                       {item.current && (
                         <Badge variant="default" className="text-xs px-2 py-0.5">
                           Current
@@ -545,7 +579,7 @@ export default function DashboardPage() {
                     onClick={() => handleRestore(item.index)}
                     disabled={restoringIndex !== null}
                     isLoading={restoringIndex === item.index}
-                    aria-label={`View analysis from ${formatHistoryDate(item.createdAt)}`}
+                    aria-label={`View analysis from ${formatRelativeTime(item.createdAt)}`}
                   >
                     View
                   </Button>

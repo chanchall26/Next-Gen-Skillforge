@@ -79,6 +79,16 @@ describe('addToHistory', () => {
     expect(session.analysisHistory?.[0].createdAt).toBe(makeAnalysis(11).createdAt);
     expect(session.analysisHistory?.[9].createdAt).toBe(makeAnalysis(2).createdAt);
   });
+
+  it('drops an oversized entry (measured in UTF-8 bytes) but keeps the session analysis', () => {
+    const big = makeAnalysis(1);
+    // 400k three-byte chars: ~400k UTF-16 units but ~1.2MB of UTF-8
+    (big.profile as any).aiSummary.overview = '€'.repeat(400_000);
+    session.analysis = big;
+    addToHistory(session, big);
+    expect(session.analysisHistory).toEqual([]);
+    expect(session.analysis).toBe(big);
+  });
 });
 
 describe('POST /api/session/analysis', () => {

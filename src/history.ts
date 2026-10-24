@@ -11,7 +11,10 @@ const MAX_HISTORY_BYTES = 1_000_000;
 /** Adds an analysis to the front of the history (newest first, max 10). */
 export function addToHistory(session: DashboardSessionData, analysis: StoredAnalysis): void {
   const history = [analysis, ...(session.analysisHistory ?? [])].slice(0, MAX_HISTORY);
-  while (history.length > 1 && JSON.stringify(history).length > MAX_HISTORY_BYTES) {
+  while (
+    history.length > 0 &&
+    new TextEncoder().encode(JSON.stringify(history)).byteLength > MAX_HISTORY_BYTES
+  ) {
     history.pop();
   }
   session.analysisHistory = history;
