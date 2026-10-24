@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useToast } from '@/components/ui/toast';
-import { apiGet, apiDelete } from '@/lib/api-client';
+import { apiGet, apiDelete, apiPost } from '@/lib/api-client';
 import type { UserProfile } from '@/lib/types';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -21,11 +21,33 @@ import {
   ArrowRight,
   Sparkles,
   BookOpen,
+  History,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+interface HistoryItem {
+  index: number;
+  createdAt: string | null;
+  overview: string;
+  atsScore: number | null;
+  industryRelevanceScore: number | null;
+  jobMatches: number;
+  current: boolean;
+}
+
+function formatHistoryDate(value: string | null): string {
+  if (!value) return 'Unknown date';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Unknown date' : date.toLocaleString();
+}
 
 export default function DashboardPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [restoringIndex, setRestoringIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [savedProfile, setSavedProfile] = useState<UserProfile | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -89,11 +111,39 @@ export default function DashboardPage() {
     return true;
   }, []);
 
+  const fetchHistory = useCallback(async () => {
+    try {
+      const data = (await apiGet('/api/session/history')) as { history?: HistoryItem[] };
+      setHistory(data.history ?? []);
+    } catch {
+      setHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchSession()
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [fetchSession]);
+    fetchHistory();
+  }, [fetchSession, fetchHistory]);
+
+  const handleRestore = async (index: number) => {
+    if (restoringIndex !== null) return;
+    setRestoringIndex(index);
+    try {
+      await apiPost('/api/session/history/restore', { index });
+      router.push('/analysis');
+    } catch {
+      setRestoringIndex(null);
+      toast({
+        title: 'Restore failed',
+        description: 'Unable to load that analysis.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -453,6 +503,58 @@ export default function DashboardPage() {
           </Card>
         </div>
       )}
+
+      <Card className="mb-8">
+        <CardHeader className="pb-4">
+          <h2 id="history-heading" className="text-lg font-bold flex items-center gap-2">
+            <History className="h-5 w-5" />
+            History
+          </h2>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {historyLoading ? (
+            <p className="text-sm text-muted-foreground">Loading history...</p>
+          ) : history.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No past analyses yet. Your last 10 analyses will show up here.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {history.map((item) => (
+                <li key={item.index} className="flex items-center justify-between gap-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium flex items-center gap-2">
+                      {formatHistoryDate(item.createdAt)}
+                      {item.current && (
+                        <Badge variant="default" className="text-xs px-2 py-0.5">
+                          Current
+                        </Badge>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {item.overview || 'No summary available.'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Relevance {item.industryRelevanceScore ?? '—'}% · ATS {item.atsScore ?? '—'} ·{' '}
+                      {item.jobMatches} job matches
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleRestore(item.index)}
+                    disabled={restoringIndex !== null}
+                    isLoading={restoringIndex === item.index}
+                    aria-label={`View analysis from ${formatHistoryDate(item.createdAt)}`}
+                  >
+                    View
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       {!hasAnalysis && (
         <div className="rounded-xl border border-dashed border-border bg-background p-12 text-center">

@@ -23,6 +23,8 @@ export interface StoredAnalysis {
 export interface DashboardSessionData {
   preferences?: DashboardPreferences;
   analysis?: StoredAnalysis;
+  /** Past analyses, newest first, capped at 10. */
+  analysisHistory?: StoredAnalysis[];
   resumeText?: string;
   resumeFileName?: string;
 }

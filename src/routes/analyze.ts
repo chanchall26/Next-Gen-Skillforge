@@ -1,6 +1,7 @@
 import { Hono, type Context } from 'hono';
 import { makeSessionCookie, type Env } from '../session';
 import { persistSession } from '../store';
+import { addToHistory } from '../history';
 import { linkSignature } from '../validate';
 import { runAnalysis } from '../engine';
 import type { DashboardSessionData } from '../types';
@@ -162,6 +163,7 @@ app.post('/', async (c) => {
     };
 
     session.analysis = analysis;
+    addToHistory(session, analysis);
     const { cookieValue } = await persistSession(c.env, session, c.get('userId'));
 
     return c.json(

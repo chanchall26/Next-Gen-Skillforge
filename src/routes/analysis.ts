@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { makeSessionCookie, type Env } from '../session';
 import { persistSession } from '../store';
+import { addToHistory } from '../history';
 import { linkSignature, sanitizeAnalysis } from '../validate';
 import type { SocialLinks, DashboardSessionData } from '../types';
 
@@ -49,6 +50,7 @@ app.post('/', async (c) => {
 
   const session = c.get('session');
   session.analysis = { ...analysis, createdAt: new Date().toISOString() };
+  addToHistory(session, session.analysis);
   session.preferences = {
     ...(session.preferences ?? {}),
     links: (analysis.profile as { links?: SocialLinks }).links,

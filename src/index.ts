@@ -6,6 +6,7 @@ import type { DashboardSessionData } from './types';
 import type { ExportedHandler, ExecutionContext } from '@cloudflare/workers-types';
 import preferencesRoute from './routes/preferences';
 import analysisRoute from './routes/analysis';
+import historyRoute from './routes/history';
 import analyzeRoute from './routes/analyze';
 import resumeRoute from './routes/resume';
 import reportRoute from './routes/report';
@@ -40,6 +41,7 @@ app.use('*', async (c, next) => {
 
 app.route('/api/session/preferences', preferencesRoute);
 app.route('/api/session/analysis', analysisRoute);
+app.route('/api/session/history', historyRoute);
 app.route('/api/analyze', analyzeRoute);
 app.route('/api/resume/import', resumeRoute);
 app.route('/api/report/download', reportRoute);
