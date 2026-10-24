@@ -222,6 +222,7 @@ function ToastComponent({
   return (
     <div
       role={variant === 'destructive' ? 'alert' : undefined}
+      aria-atomic="true"
       className={cn(
         'relative flex items-start gap-4 rounded-lg border p-4 shadow-lg w-full max-w-sm animate-toast-in',
         variantConfig[variant],
