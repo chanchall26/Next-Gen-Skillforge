@@ -183,7 +183,12 @@ function ToastProvider({ children }: { children?: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="fixed top-0 right-0 z-50 p-4 flex flex-col gap-2 pointer-events-none">
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="false"
+      className="fixed top-0 right-0 z-50 p-4 flex flex-col gap-2 pointer-events-none"
+    >
       {toasts.map((t) => (
         <div key={t.id} className="pointer-events-auto">
           <ToastComponent {...t} />
@@ -203,6 +208,9 @@ function ToastComponent({
   action,
   variant = 'default',
   className,
+  // id and duration are toast state, not DOM attributes
+  id: _id,
+  duration: _duration,
   ...props
 }: ToastComponentProps) {
   const variantConfig: Record<string, string> = {
@@ -213,6 +221,7 @@ function ToastComponent({
 
   return (
     <div
+      role={variant === 'destructive' ? 'alert' : undefined}
       className={cn(
         'relative flex items-start gap-4 rounded-lg border p-4 shadow-lg w-full max-w-sm animate-toast-in',
         variantConfig[variant],
@@ -223,19 +232,19 @@ function ToastComponent({
       <div className="shrink-0">
         {variant === 'success' ? (
           <div className="flex h-3 w-3 items-center justify-center rounded-full bg-accent-foreground text-accent">
-            <svg className="h-2 w-2" fill="currentColor" viewBox="0 0 20 20">
+            <svg aria-hidden="true" className="h-2 w-2" fill="currentColor" viewBox="0 0 20 20">
               <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
             </svg>
           </div>
         ) : variant === 'destructive' ? (
           <div className="flex h-3 w-3 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
-            <svg className="h-2 w-2" fill="currentColor" viewBox="0 0 20 20">
+            <svg aria-hidden="true" className="h-2 w-2" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h3a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
             </svg>
           </div>
         ) : (
           <div className="flex h-3 w-3 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <svg className="h-2 w-2" fill="currentColor" viewBox="0 0 20 20">
+            <svg aria-hidden="true" className="h-2 w-2" fill="currentColor" viewBox="0 0 20 20">
               <path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" />
             </svg>
           </div>
